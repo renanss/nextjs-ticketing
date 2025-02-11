@@ -272,7 +272,6 @@ const Screen = styled.div`
   margin: 1rem;
 `;
 
-// Define a type for seat status
 type SeatStatus = {
   status: 'available' | 'reserved' | 'selected';
   selectionType?: 'manual' | 'auto';
@@ -288,7 +287,6 @@ const Header = ({ seats, onAutoSelect }: HeaderProps) => {
 
   const handleButtonClick = (button: string) => {
     if (button === "plus") {
-      // Find all available seats
       const availableIndexes = seats.reduce<number[]>((acc, seat, index) => {
         if (seat.status === "available") acc.push(index);
         return acc;
@@ -299,7 +297,6 @@ const Header = ({ seats, onAutoSelect }: HeaderProps) => {
         onAutoSelect(availableIndexes[randomIndex], 'select');
       }
     } else {
-      // Find seats selected by auto
       const autoSelectedIndexes = seats.reduce<number[]>((acc, seat, index) => {
         if (seat.status === "selected" && seat.selectionType === "auto") acc.push(index);
         return acc;
@@ -468,22 +465,17 @@ const TicketingPage = () => {
   const handleSeatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     const seatIndex = parseInt(event.currentTarget.dataset.index || '0');
     const newSeats = [...seats];
+    const currentSeat = newSeats[seatIndex];
 
-		const isSelected = newSeats[seatIndex].status === 'selected';
-    
-    if (isSelected) {
-      newSeats[seatIndex] = { 
-        status: 'available', 
-        selectionType: undefined 
-      };
-    } else {
-      newSeats[seatIndex] = { 
-        status: 'selected', 
-        selectionType: 'manual' 
-      };
+		const isManuallySelected = currentSeat.status === 'selected' && currentSeat.selectionType === 'manual';
+
+    if (currentSeat.status === 'available' || isManuallySelected) {
+        newSeats[seatIndex] = currentSeat.status === 'available'
+        ? { status: 'selected', selectionType: 'manual' }
+        : { status: 'available', selectionType: undefined };
+      
+      setSeats(newSeats);
     }
-    
-    setSeats(newSeats);
   };
 
   const handleAutoSelect = (index: number, action: 'select' | 'deselect') => {
