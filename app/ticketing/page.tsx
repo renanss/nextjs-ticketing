@@ -165,12 +165,17 @@ const FillerSeat = styled.div`
 `;
 
 // actual seat highlighted through an icon
-const Seat = styled.button`
+interface SeatProps {
+  'data-status'?: string;
+}
+
+const Seat = styled.button<SeatProps>`
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: none;
   border: none;
+  cursor: ${props => props['data-status'] === 'reserved' ? 'not-allowed' : 'pointer'};
 
   svg {
     width: 100%;
@@ -270,13 +275,50 @@ const Screen = styled.div`
 /******************* Logic: Start updating from here ************************/
 
 // render the two buttons making use of the Icon component
-const Header = () => {
+
+interface HeaderProps {
+	seats: string[];
+  onAutoSelect: (index: number, action: 'auto-selected' | 'deselect') => void;
+}
+const Header = ({ seats, onAutoSelect }: HeaderProps) => {
   const buttons = ["plus", "minus"];
+
+  const handleButtonClick = (button: string) => {
+    if (button === "plus") {
+      // Find all available seats
+      const availableIndexes = seats.reduce<number[]>((acc, seat, index) => {
+        if (seat === "available") acc.push(index);
+        return acc;
+      }, []);
+
+      if (availableIndexes.length > 0) {
+        // Randomly select one available seat
+        const randomIndex = Math.floor(Math.random() * availableIndexes.length);
+        onAutoSelect(availableIndexes[randomIndex], 'auto-selected');
+      }
+    } else {
+      // Find all auto-selected seats
+      const selectedIndexes = seats.reduce<number[]>((acc, seat, index) => {
+        if (seat === "auto-selected") acc.push(index);
+        return acc;
+      }, []);
+
+			console.log(selectedIndexes);
+			console.log(seats);
+
+      if (selectedIndexes.length > 0) {
+        // Randomly deselect one auto-selected seat
+        const randomIndex = Math.floor(Math.random() * selectedIndexes.length);
+        onAutoSelect(selectedIndexes[randomIndex], 'deselect');
+      }
+    }
+  };
+
   return (
     <HeaderContainer>
       <HeaderTitle>Choose Seats</HeaderTitle>
       {buttons.map((button) => (
-        <HeaderButton key={button}>
+        <HeaderButton key={button} onClick={() => handleButtonClick(button)}>
           <Icon href={button} size="28" />
         </HeaderButton>
       ))}
@@ -287,7 +329,13 @@ const Header = () => {
 /**
  * Load icon files from svg. There's no need to change this component.
  */
-const Legend = () => {
+interface LegendProps {
+	seats: string[];
+}
+const Legend = ({ seats }: LegendProps) => {
+	const availableSeats = seats.filter((seat) => seat === "available");
+	const selectedSeats = seats.filter((seat) => seat === "selected");
+	
   return (
     <>
       <div style={{ display: "none" }}>
@@ -295,7 +343,7 @@ const Legend = () => {
       </div>
       <LegendContainer>
         <LegendItem>
-          <IconAvailable size={16} number={5} />
+          <IconAvailable size={16} number={availableSeats.length} />
           <LegendItemName>Available</LegendItemName>
         </LegendItem>
         <LegendItem>
@@ -303,7 +351,7 @@ const Legend = () => {
           <LegendItemName>Reserved</LegendItemName>
         </LegendItem>
         <LegendItem>
-          <IconSelected size={16} number={5} />
+          <IconSelected size={16} number={selectedSeats.length} />
           <LegendItemName>Selected</LegendItemName>
         </LegendItem>
       </LegendContainer>
@@ -321,16 +369,20 @@ const Theater = ({
   seats: string[];
   onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) => {
-  // four FillerSeat components, occupying the selected space in the group
   const FillerSeats = Array(4)
     .fill("")
     .map((item, i) => <FillerSeat key={i} />);
 
-  const Seats = seats.map((seat, i) => (
-    <Seat onClick={onSeatClick} data-index={i} data-status={seat} key={i}>
-      <Icon href={seat} size="16" />
-    </Seat>
-  ));
+  const Seats = seats.map((seat, i) => {
+    // Convert auto-selected to selected for styling purposes
+    const displayStatus = seat === 'auto-selected' ? 'selected' : seat;
+    
+    return (
+      <Seat onClick={onSeatClick} data-index={i} data-status={seat} key={i}>
+        <Icon href={displayStatus} size="16" />
+      </Seat>
+    );
+  });
 
   return (
     <TheaterContainer>
@@ -382,11 +434,17 @@ const Checkout = () => {
 // render the components making up the screen
 // use the theme in the styled component
 // pass the array of seats and the sum to the fitting components
-const Phone = ({ seats }: { seats: string[] }) => (
+
+interface PhoneProps {
+  seats: string[];
+  onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onAutoSelect: (index: number, action: 'auto-selected' | 'deselect') => void;
+}
+const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => (
   <Screen theme="dark">
-    <Header />
-    <Legend />
-    <Theater seats={seats} />
+    <Header seats={seats}  onAutoSelect={onAutoSelect} />
+    <Legend seats={seats} />
+    <Theater seats={seats} onSeatClick={onSeatClick} />
     <Details />
     <Checkout />
   </Screen>
@@ -404,9 +462,23 @@ const Phone = ({ seats }: { seats: string[] }) => (
 const TicketingPage = () => {
   const [seats, setSeats] = useState(INITIAL_SEAT_MAP);
 
+  const handleSeatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+		console.log(event.currentTarget.dataset.status);
+    const seatIndex = parseInt(event.currentTarget.dataset.index || '0');
+    const newSeats = [...seats];
+    newSeats[seatIndex] = 'selected';
+    setSeats(newSeats);
+  };
+
+	const handleAutoSelect = (index: number, action: 'auto-selected' | 'deselect') => {
+		const newSeats = [...seats];
+		console.log(index, action);
+		newSeats[index] = action === 'auto-selected' ? 'auto-selected' : 'available';
+		setSeats(newSeats);
+	}
   return (
     <div className="app w-full flex items-center justify-center">
-      <Phone seats={seats} />
+      <Phone seats={seats} onSeatClick={handleSeatClick} onAutoSelect={handleAutoSelect} />
     </div>
   );
 };
