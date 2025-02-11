@@ -46,7 +46,4 @@ body {
   .selected {
     color: var(--accent, #fd6d8e);
   }
-  .auto-selected {
-    color: var(--accent, #fd6d8e);
-  }
 }

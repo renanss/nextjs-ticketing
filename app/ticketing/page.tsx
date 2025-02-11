@@ -272,14 +272,17 @@ const Screen = styled.div`
   margin: 1rem;
 `;
 
-/******************* Logic: Start updating from here ************************/
-
-// render the two buttons making use of the Icon component
+// Define a type for seat status
+type SeatStatus = {
+  status: 'available' | 'reserved' | 'selected';
+  selectionType?: 'manual' | 'auto';
+};
 
 interface HeaderProps {
-	seats: string[];
-  onAutoSelect: (index: number, action: 'auto-selected' | 'deselect') => void;
+  seats: SeatStatus[];
+  onAutoSelect: (index: number, action: 'select' | 'deselect') => void;
 }
+
 const Header = ({ seats, onAutoSelect }: HeaderProps) => {
   const buttons = ["plus", "minus"];
 
@@ -287,29 +290,24 @@ const Header = ({ seats, onAutoSelect }: HeaderProps) => {
     if (button === "plus") {
       // Find all available seats
       const availableIndexes = seats.reduce<number[]>((acc, seat, index) => {
-        if (seat === "available") acc.push(index);
+        if (seat.status === "available") acc.push(index);
         return acc;
       }, []);
 
       if (availableIndexes.length > 0) {
-        // Randomly select one available seat
         const randomIndex = Math.floor(Math.random() * availableIndexes.length);
-        onAutoSelect(availableIndexes[randomIndex], 'auto-selected');
+        onAutoSelect(availableIndexes[randomIndex], 'select');
       }
     } else {
-      // Find all auto-selected seats
-      const selectedIndexes = seats.reduce<number[]>((acc, seat, index) => {
-        if (seat === "auto-selected") acc.push(index);
+      // Find seats selected by auto
+      const autoSelectedIndexes = seats.reduce<number[]>((acc, seat, index) => {
+        if (seat.status === "selected" && seat.selectionType === "auto") acc.push(index);
         return acc;
       }, []);
 
-			console.log(selectedIndexes);
-			console.log(seats);
-
-      if (selectedIndexes.length > 0) {
-        // Randomly deselect one auto-selected seat
-        const randomIndex = Math.floor(Math.random() * selectedIndexes.length);
-        onAutoSelect(selectedIndexes[randomIndex], 'deselect');
+      if (autoSelectedIndexes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * autoSelectedIndexes.length);
+        onAutoSelect(autoSelectedIndexes[randomIndex], 'deselect');
       }
     }
   };
@@ -330,11 +328,11 @@ const Header = ({ seats, onAutoSelect }: HeaderProps) => {
  * Load icon files from svg. There's no need to change this component.
  */
 interface LegendProps {
-	seats: string[];
+	seats: SeatStatus[];
 }
 const Legend = ({ seats }: LegendProps) => {
-	const availableSeats = seats.filter((seat) => seat === "available");
-	const selectedSeats = seats.filter((seat) => seat === "selected");
+	const availableSeats = seats.filter((seat) => seat.status === "available");
+	const selectedSeats = seats.filter((seat) => seat.status === "selected");
 	
   return (
     <>
@@ -366,23 +364,23 @@ const Theater = ({
   seats = [],
   onSeatClick,
 }: {
-  seats: string[];
+  seats: SeatStatus[];
   onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) => {
   const FillerSeats = Array(4)
     .fill("")
     .map((item, i) => <FillerSeat key={i} />);
 
-  const Seats = seats.map((seat, i) => {
-    // Convert auto-selected to selected for styling purposes
-    const displayStatus = seat === 'auto-selected' ? 'selected' : seat;
-    
-    return (
-      <Seat onClick={onSeatClick} data-index={i} data-status={seat} key={i}>
-        <Icon href={displayStatus} size="16" />
-      </Seat>
-    );
-  });
+  const Seats = seats.map((seat, i) => (
+    <Seat 
+      onClick={onSeatClick} 
+      data-index={i} 
+      data-status={seat.status} 
+      key={i}
+    >
+      <Icon href={seat.status} size="16" />
+    </Seat>
+  ));
 
   return (
     <TheaterContainer>
@@ -436,9 +434,9 @@ const Checkout = () => {
 // pass the array of seats and the sum to the fitting components
 
 interface PhoneProps {
-  seats: string[];
+  seats: SeatStatus[];
   onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onAutoSelect: (index: number, action: 'auto-selected' | 'deselect') => void;
+  onAutoSelect: (index: number, action: 'select' | 'deselect') => void;
 }
 const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => (
   <Screen theme="dark">
@@ -460,22 +458,42 @@ const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => (
  * Each seat has a price of 10, configured in the SEAT_PRICE constant
  */
 const TicketingPage = () => {
-  const [seats, setSeats] = useState(INITIAL_SEAT_MAP);
+  const [seats, setSeats] = useState<SeatStatus[]>(
+    INITIAL_SEAT_MAP.map(status => ({ 
+      status: status as "reserved" | "available" | "selected", 
+      selectionType: undefined 
+    }))
+  );
 
   const handleSeatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-		console.log(event.currentTarget.dataset.status);
     const seatIndex = parseInt(event.currentTarget.dataset.index || '0');
     const newSeats = [...seats];
-    newSeats[seatIndex] = 'selected';
+
+		const isSelected = newSeats[seatIndex].status === 'selected';
+    
+    if (isSelected) {
+      newSeats[seatIndex] = { 
+        status: 'available', 
+        selectionType: undefined 
+      };
+    } else {
+      newSeats[seatIndex] = { 
+        status: 'selected', 
+        selectionType: 'manual' 
+      };
+    }
+    
     setSeats(newSeats);
   };
 
-	const handleAutoSelect = (index: number, action: 'auto-selected' | 'deselect') => {
-		const newSeats = [...seats];
-		console.log(index, action);
-		newSeats[index] = action === 'auto-selected' ? 'auto-selected' : 'available';
-		setSeats(newSeats);
-	}
+  const handleAutoSelect = (index: number, action: 'select' | 'deselect') => {
+    const newSeats = [...seats];
+    newSeats[index] = action === 'select' 
+      ? { status: 'selected', selectionType: 'auto' }
+      : { status: 'available' };
+    setSeats(newSeats);
+  };
+
   return (
     <div className="app w-full flex items-center justify-center">
       <Phone seats={seats} onSeatClick={handleSeatClick} onAutoSelect={handleAutoSelect} />
