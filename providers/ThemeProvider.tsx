@@ -1,33 +1,12 @@
 'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => Promise<void>;
-}
-
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
-  setTheme: async () => {},
-});
+import { useState, useEffect } from 'react';
+import { ThemeContext } from '@/hooks/useTheme';
+import type { Theme } from '@/hooks/useTheme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/theme')
-      .then(res => res.json())
-      .then(data => {
-        if (data.theme === 'light' || data.theme === 'dark') {
-          setThemeState(data.theme);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
 
   const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -47,6 +26,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+	useEffect(() => {
+    fetch('/api/theme')
+      .then(res => res.json())
+      .then(data => {
+        if (data.theme === 'light' || data.theme === 'dark') {
+          setThemeState(data.theme);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
+
   if (isLoading) {
     return null;
   }
@@ -56,12 +47,4 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       {children}
     </ThemeContext.Provider>
   );
-}
-
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
 } 
