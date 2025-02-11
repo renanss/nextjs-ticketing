@@ -10,6 +10,56 @@ A ticket booking application that allows users to select seats and make reservat
 - Theme toggle with persistence
 - Responsive design
 
+## Code Architecture
+
+The project follows a component-first architecture with clear separation of concerns:
+
+1. **Component Organization**
+   - Each component lives in its own directory with related files
+   - Components are split into `index.tsx` for logic and `styles.ts` for styling
+   - Clear separation between presentational and container components
+
+2. **Performance Optimizations**
+   - Strategic use of `useMemo` for expensive calculations
+   - `useCallback` for stable function references
+   - Props drilling minimized through proper component composition
+   - Proper interleaving of Server and Client Components
+
+3. **State Management**
+   - Centralized state management with custom hooks
+   - Theme persistence using server-side caching
+   - Efficient state updates with React's state management
+
+4. **Server/Client Component Pattern**
+   - Following Next.js 13+ patterns for Server/Client Components
+   - Server Components used when possible for better performance
+   - Client Components marked explicitly with 'use client'
+   - Proper component composition to optimize bundle size
+
+## Project Structure
+
+```
+├── app/
+│   ├── api/
+│   │   └── theme/
+│   └── ticketing/
+├── components/
+│   ├── Phone/
+│   │   ├── Checkout/
+│   │   ├── Details/
+│   │   ├── Header/
+│   │   ├── Legend/
+│   │   ├── Seat/
+│   │   └── Theater/
+│   └── shared/
+│       └── Icon/
+├── hooks/
+├── lib/
+├── providers/
+└── public/
+    └── assets/
+```
+
 ## Getting Started
 
 First, install the dependencies and run the development server:
@@ -44,15 +94,31 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - [Next.js](https://nextjs.org/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
+- [Styled Components](https://styled-components.com/)
+
+## Performance Considerations
+
+1. **Component Optimization**
+   - Components are memoized when beneficial
+   - Event handlers are stabilized with useCallback
+   - Heavy calculations are cached with useMemo
+   - Props are kept minimal to prevent unnecessary re-renders
+
+2. **Server/Client Split**
+   - Static content rendered on server for faster FCP
+   - Interactive elements properly marked as client components
+   - Proper interleaving of server and client components
+   - Following Next.js best practices for component composition
+
+3. **State Management**
+   - Centralized state with hooks for better maintainability
+   - Minimal prop drilling through proper component structure
+   - Efficient updates using React's state management
+   - Theme persistence with server-side caching
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Server/Client Component Patterns](https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns) - learn about Next.js component composition.
 
 ## Deploy on Vercel
 
