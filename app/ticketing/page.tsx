@@ -7,6 +7,8 @@ import { INITIAL_SEAT_MAP, SEAT_PRICE } from "@/components/constants";
 import IconSelected from "@/components/IconSelected";
 import IconReserved from "@/components/IconReserved";
 import IconAvailable from "@/components/IconAvailable";
+import { useTheme } from '@/lib/theme';
+import { DefaultTheme } from 'styled-components';
 // Component to inject the icon created through a symbol element
 // Render the svg icon using the href passed as props
 const Icon = ({
@@ -18,6 +20,7 @@ const Icon = ({
   size: number;
   text?: string;
 }) => {
+  
   return (
     <svg className={href} width={size} height={size}>
       <use href={`#${href}`} />
@@ -258,10 +261,10 @@ const CheckoutAction = styled.span`
 
 // phone screen as a rounded box with a noticeable shadow
 // update the custom properties according to the theme variable
-const Screen = styled.div`
-  --color: ${({ theme }) => (theme === "light" ? "#2c2f62" : "#eee")};
-  --background: ${({ theme }) => (theme === "light" ? "#fff" : "#2c2f62")};
-  --accent: ${({ theme }) => (theme === "light" ? "#fd6d8e" : "#fcb43c")};
+const Screen = styled.div<{ theme: DefaultTheme }>`
+  --color: ${({ theme }) => (theme.mode === "light" ? "#2c2f62" : "#eee")};
+  --background: ${({ theme }) => (theme.mode === "light" ? "#fff" : "#2c2f62")};
+  --accent: ${({ theme }) => (theme.mode === "light" ? "#fd6d8e" : "#fcb43c")};
   border-radius: 30px;
   width: 300px;
   min-height: 500px;
@@ -447,23 +450,30 @@ interface PhoneProps {
 }
 
 const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => {
+  const { theme, setTheme } = useTheme();
+
   return (
-    <Screen theme="dark">
-      <Header seats={seats} onAutoSelect={onAutoSelect} />
-      <Legend seats={seats} />
-      <Theater 
-        seats={seats} 
-        onSeatClick={(event) => {
-          const index = parseInt(event.currentTarget.dataset.index || '0');
-          onSeatClick(index);
-        }} 
-      />
-      <Details 
-        seats={seats} 
-        onSeatClick={(index) => onSeatClick(index, true)} 
-      />
-      <Checkout seats={seats} />
-    </Screen>
+    <>
+      <ThemeToggle onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+        {theme === 'light' ? '🌙' : '☀️'}
+      </ThemeToggle>
+      <Screen theme={{ mode: theme }}>
+        <Header seats={seats} onAutoSelect={onAutoSelect} />
+        <Legend seats={seats} />
+        <Theater 
+          seats={seats} 
+          onSeatClick={(event) => {
+            const index = parseInt(event.currentTarget.dataset.index || '0');
+            onSeatClick(index);
+          }} 
+        />
+        <Details 
+          seats={seats} 
+          onSeatClick={(index) => onSeatClick(index, true)} 
+        />
+        <Checkout seats={seats} />
+      </Screen>
+    </>
   );
 };
 
@@ -523,5 +533,19 @@ const TicketingPage = () => {
     </div>
   );
 };
+
+const ThemeToggle = styled.button`
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background: var(--accent, #fd6d8e);
+  color: var(--background, #ffffff);
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 5px -4px currentColor;
+`;
 
 export default TicketingPage;
