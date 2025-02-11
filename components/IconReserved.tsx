@@ -5,7 +5,7 @@ const IconReserved = ({ size }: { size: number }) => (
     width={size}
     height={size}
   >
-    <g fill="currentColor">
+    <g fill="#f2f2f2">
       <circle cx="50" cy="50" r="50"></circle>
       <g fill="#000" opacity="0.2">
         <circle cx="50" cy="42" r="15"></circle>

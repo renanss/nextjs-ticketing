@@ -59,3 +59,37 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Theme Persistence Implementation
+
+The current implementation uses a simple in-memory cache with IP-based identification:
+
+1. **Memory Cache Strategy**
+   - Server-side in-memory Map storage
+   - IP address as unique identifier
+   - 30-day expiration for cached values
+   - Works across regular and incognito browser sessions
+
+2. **Implementation Details**
+   ```typescript
+   // Simplified cache structure
+   const memoryCache = new Map<string, {
+     value: string,    // theme preference
+     timestamp: number // for expiration
+   }>();
+   ```
+
+3. **Limitations**
+   - Cache clears on server restarts
+   - Shared IPs (corporate networks, NAT) will share same theme
+   - Mobile users with dynamic IPs may see inconsistent themes
+   - Not suitable for high-availability deployments
+
+4. **Future Improvements**
+   For a more robust production solution, consider:
+   - Redis for persistent cross-server caching
+   - Database storage with user authentication
+   - Cookie-based storage for simpler deployments
+   - Local storage with system preference fallback
+
+The current implementation provides a lightweight solution suitable for development and small deployments, balancing simplicity with reasonable cross-session persistence.
