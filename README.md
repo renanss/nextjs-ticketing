@@ -1,22 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js Ticketing App
+
+A ticket booking application that allows users to select seats and make reservations. Try the live demo at [https://nextjs-ticketing.vercel.app/](https://nextjs-ticketing.vercel.app/).
+
+## Features
+
+- Interactive seat selection
+- Random seat allocation
+- Price calculation and checkout
+- Theme toggle with persistence
+- Responsive design
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies and run the development server:
 
 ```bash
-npm install
-npm run dev
-# or
 yarn
 yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Requirements
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Seat Selection**
+   - Random seat selection via + button
+   - Manual seat selection by clicking
+   - Seat deselection functionality
+   - Selected seats counter
+
+2. **Booking Details**
+   - Display selected seat numbers and prices
+   - Interactive seat unselection from details
+   - Total price calculation
+   - Checkout functionality
+
+3. **Theme Customization**
+   - Light/Dark mode toggle
+   - Theme persistence across sessions
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
 
 ## Learn More
 
