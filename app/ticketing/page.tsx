@@ -3,7 +3,7 @@
 import { useState } from "react";
 import styled from "styled-components";
 import SVGIcons from "@/components/SVGIcons";
-import { INITIAL_SEAT_MAP } from "@/components/constants";
+import { INITIAL_SEAT_MAP, SEAT_PRICE } from "@/components/constants";
 import IconSelected from "@/components/IconSelected";
 import IconReserved from "@/components/IconReserved";
 import IconAvailable from "@/components/IconAvailable";
@@ -222,7 +222,7 @@ const DetailsButton = styled.button`
   border-radius: 20px;
   margin: 0 0.5rem;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   text-transform: capitalize;
 
   svg {
@@ -391,25 +391,31 @@ const Theater = ({
 };
 
 // for each selected seat include a button with the close icon
-const Details = ({
-  selectedSeats = [],
-}: {
-  selectedSeats?: { seat: number; price: number }[];
-}) => {
-  // in the button include the text in the following format
-  // row: 7 seat: 4 price: $16
+interface DetailsProps {
+  seats: SeatStatus[];
+  onSeatClick: (index: number) => void;
+}
+
+const Details = ({ seats, onSeatClick }: DetailsProps) => {
+  const selectedSeats = seats.reduce<{ seat: number; price: number }[]>((acc, seat, index) => {
+    if (seat.status === 'selected') {
+      acc.push({ seat: index + 1, price: SEAT_PRICE });
+    }
+    return acc;
+  }, []);
+
   return (
     <DetailsContainer>
       <DetailsHeading>Details</DetailsHeading>
-      {selectedSeats.map((selectedSeat) => {
+			{selectedSeats.map((selectedSeat) => {
         const entries = Object.entries(selectedSeat);
         return (
-          <DetailsButton key={entries[0][1]} data-index={entries[0][1]}>
+          <DetailsButton key={entries[0][1]} data-index={entries[0][1]} onClick={() => onSeatClick(selectedSeat.seat - 1)}>
             {entries
               .map(([property, value]) => `${property}: ${value}`)
               .join(" ")
               .trim()}
-            <Icon href="close" size="12" />
+            <Icon href="close" size="12"  />
           </DetailsButton>
         );
       })}
@@ -417,10 +423,14 @@ const Details = ({
   );
 };
 
-const Checkout = () => {
+const Checkout = ({ seats }: { seats: SeatStatus[] }) => {
+  const total = seats.reduce((sum, seat) => {
+    return seat.status === 'selected' ? sum + SEAT_PRICE : sum;
+  }, 0);
+
   return (
     <CheckoutContainer>
-      <CheckoutTotal>${135}</CheckoutTotal>
+      <CheckoutTotal>${total}</CheckoutTotal>
       <CheckoutAction>Checkout</CheckoutAction>
     </CheckoutContainer>
   );
@@ -432,18 +442,30 @@ const Checkout = () => {
 
 interface PhoneProps {
   seats: SeatStatus[];
-  onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onSeatClick: (index: number, ignoreSelectionMode?: boolean) => void;
   onAutoSelect: (index: number, action: 'select' | 'deselect') => void;
 }
-const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => (
-  <Screen theme="dark">
-    <Header seats={seats}  onAutoSelect={onAutoSelect} />
-    <Legend seats={seats} />
-    <Theater seats={seats} onSeatClick={onSeatClick} />
-    <Details />
-    <Checkout />
-  </Screen>
-);
+
+const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => {
+  return (
+    <Screen theme="dark">
+      <Header seats={seats} onAutoSelect={onAutoSelect} />
+      <Legend seats={seats} />
+      <Theater 
+        seats={seats} 
+        onSeatClick={(event) => {
+          const index = parseInt(event.currentTarget.dataset.index || '0');
+          onSeatClick(index);
+        }} 
+      />
+      <Details 
+        seats={seats} 
+        onSeatClick={(index) => onSeatClick(index, true)} 
+      />
+      <Checkout seats={seats} />
+    </Screen>
+  );
+};
 
 /**
  * Page component to manage the state of the application and render the phone screen(s)
@@ -462,15 +484,20 @@ const TicketingPage = () => {
     }))
   );
 
-  const handleSeatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const seatIndex = parseInt(event.currentTarget.dataset.index || '0');
+  const handleSeatClick = (seatIndex: number, ignoreSelectionMode: boolean = false) => {
     const newSeats = [...seats];
     const currentSeat = newSeats[seatIndex];
 
-		const isManuallySelected = currentSeat.status === 'selected' && currentSeat.selectionType === 'manual';
+    if (ignoreSelectionMode && currentSeat.status === 'selected') {
+      newSeats[seatIndex] = { status: 'available', selectionType: undefined };
+      setSeats(newSeats);
+      return;
+    }
+
+    const isManuallySelected = currentSeat.status === 'selected' && currentSeat.selectionType === 'manual';
 
     if (currentSeat.status === 'available' || isManuallySelected) {
-        newSeats[seatIndex] = currentSeat.status === 'available'
+      newSeats[seatIndex] = currentSeat.status === 'available'
         ? { status: 'selected', selectionType: 'manual' }
         : { status: 'available', selectionType: undefined };
       
@@ -482,13 +509,17 @@ const TicketingPage = () => {
     const newSeats = [...seats];
     newSeats[index] = action === 'select' 
       ? { status: 'selected', selectionType: 'auto' }
-      : { status: 'available' };
+      : { status: 'available', selectionType: undefined };
     setSeats(newSeats);
   };
 
   return (
     <div className="app w-full flex items-center justify-center">
-      <Phone seats={seats} onSeatClick={handleSeatClick} onAutoSelect={handleAutoSelect} />
+      <Phone 
+        seats={seats} 
+        onSeatClick={handleSeatClick} 
+        onAutoSelect={handleAutoSelect} 
+      />
     </div>
   );
 };
