@@ -165,12 +165,17 @@ const FillerSeat = styled.div`
 `;
 
 // actual seat highlighted through an icon
-const Seat = styled.button`
+interface SeatProps {
+  'data-status'?: string;
+}
+
+const Seat = styled.button<SeatProps>`
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: none;
   border: none;
+  cursor: ${props => props['data-status'] === 'reserved' ? 'not-allowed' : 'pointer'};
 
   svg {
     width: 100%;
@@ -267,16 +272,48 @@ const Screen = styled.div`
   margin: 1rem;
 `;
 
-/******************* Logic: Start updating from here ************************/
+type SeatStatus = {
+  status: 'available' | 'reserved' | 'selected';
+  selectionType?: 'manual' | 'auto';
+};
 
-// render the two buttons making use of the Icon component
-const Header = () => {
+interface HeaderProps {
+  seats: SeatStatus[];
+  onAutoSelect: (index: number, action: 'select' | 'deselect') => void;
+}
+
+const Header = ({ seats, onAutoSelect }: HeaderProps) => {
   const buttons = ["plus", "minus"];
+
+  const handleButtonClick = (button: string) => {
+    if (button === "plus") {
+      const availableIndexes = seats.reduce<number[]>((acc, seat, index) => {
+        if (seat.status === "available") acc.push(index);
+        return acc;
+      }, []);
+
+      if (availableIndexes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableIndexes.length);
+        onAutoSelect(availableIndexes[randomIndex], 'select');
+      }
+    } else {
+      const autoSelectedIndexes = seats.reduce<number[]>((acc, seat, index) => {
+        if (seat.status === "selected" && seat.selectionType === "auto") acc.push(index);
+        return acc;
+      }, []);
+
+      if (autoSelectedIndexes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * autoSelectedIndexes.length);
+        onAutoSelect(autoSelectedIndexes[randomIndex], 'deselect');
+      }
+    }
+  };
+
   return (
     <HeaderContainer>
       <HeaderTitle>Choose Seats</HeaderTitle>
       {buttons.map((button) => (
-        <HeaderButton key={button}>
+        <HeaderButton key={button} onClick={() => handleButtonClick(button)}>
           <Icon href={button} size="28" />
         </HeaderButton>
       ))}
@@ -287,7 +324,13 @@ const Header = () => {
 /**
  * Load icon files from svg. There's no need to change this component.
  */
-const Legend = () => {
+interface LegendProps {
+	seats: SeatStatus[];
+}
+const Legend = ({ seats }: LegendProps) => {
+	const availableSeats = seats.filter((seat) => seat.status === "available");
+	const selectedSeats = seats.filter((seat) => seat.status === "selected");
+	
   return (
     <>
       <div style={{ display: "none" }}>
@@ -295,7 +338,7 @@ const Legend = () => {
       </div>
       <LegendContainer>
         <LegendItem>
-          <IconAvailable size={16} number={5} />
+          <IconAvailable size={16} number={availableSeats.length} />
           <LegendItemName>Available</LegendItemName>
         </LegendItem>
         <LegendItem>
@@ -303,7 +346,7 @@ const Legend = () => {
           <LegendItemName>Reserved</LegendItemName>
         </LegendItem>
         <LegendItem>
-          <IconSelected size={16} number={5} />
+          <IconSelected size={16} number={selectedSeats.length} />
           <LegendItemName>Selected</LegendItemName>
         </LegendItem>
       </LegendContainer>
@@ -318,17 +361,21 @@ const Theater = ({
   seats = [],
   onSeatClick,
 }: {
-  seats: string[];
+  seats: SeatStatus[];
   onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) => {
-  // four FillerSeat components, occupying the selected space in the group
   const FillerSeats = Array(4)
     .fill("")
     .map((item, i) => <FillerSeat key={i} />);
 
   const Seats = seats.map((seat, i) => (
-    <Seat onClick={onSeatClick} data-index={i} data-status={seat} key={i}>
-      <Icon href={seat} size="16" />
+    <Seat 
+      onClick={onSeatClick} 
+      data-index={i} 
+      data-status={seat.status} 
+      key={i}
+    >
+      <Icon href={seat.status} size="16" />
     </Seat>
   ));
 
@@ -382,11 +429,17 @@ const Checkout = () => {
 // render the components making up the screen
 // use the theme in the styled component
 // pass the array of seats and the sum to the fitting components
-const Phone = ({ seats }: { seats: string[] }) => (
+
+interface PhoneProps {
+  seats: SeatStatus[];
+  onSeatClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onAutoSelect: (index: number, action: 'select' | 'deselect') => void;
+}
+const Phone = ({ seats, onSeatClick, onAutoSelect }: PhoneProps) => (
   <Screen theme="dark">
-    <Header />
-    <Legend />
-    <Theater seats={seats} />
+    <Header seats={seats}  onAutoSelect={onAutoSelect} />
+    <Legend seats={seats} />
+    <Theater seats={seats} onSeatClick={onSeatClick} />
     <Details />
     <Checkout />
   </Screen>
@@ -402,11 +455,40 @@ const Phone = ({ seats }: { seats: string[] }) => (
  * Each seat has a price of 10, configured in the SEAT_PRICE constant
  */
 const TicketingPage = () => {
-  const [seats, setSeats] = useState(INITIAL_SEAT_MAP);
+  const [seats, setSeats] = useState<SeatStatus[]>(
+    INITIAL_SEAT_MAP.map(status => ({ 
+      status: status as "reserved" | "available" | "selected", 
+      selectionType: undefined 
+    }))
+  );
+
+  const handleSeatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const seatIndex = parseInt(event.currentTarget.dataset.index || '0');
+    const newSeats = [...seats];
+    const currentSeat = newSeats[seatIndex];
+
+		const isManuallySelected = currentSeat.status === 'selected' && currentSeat.selectionType === 'manual';
+
+    if (currentSeat.status === 'available' || isManuallySelected) {
+        newSeats[seatIndex] = currentSeat.status === 'available'
+        ? { status: 'selected', selectionType: 'manual' }
+        : { status: 'available', selectionType: undefined };
+      
+      setSeats(newSeats);
+    }
+  };
+
+  const handleAutoSelect = (index: number, action: 'select' | 'deselect') => {
+    const newSeats = [...seats];
+    newSeats[index] = action === 'select' 
+      ? { status: 'selected', selectionType: 'auto' }
+      : { status: 'available' };
+    setSeats(newSeats);
+  };
 
   return (
     <div className="app w-full flex items-center justify-center">
-      <Phone seats={seats} />
+      <Phone seats={seats} onSeatClick={handleSeatClick} onAutoSelect={handleAutoSelect} />
     </div>
   );
 };
